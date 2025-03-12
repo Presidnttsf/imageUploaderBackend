@@ -86,27 +86,32 @@ app.use("/uploads", express.static(uploadDir)); // Serve uploaded files statical
 
 // API endpoint to handle image uploads
 app.post("/upload", upload.single("image"), async (req, res) => {
-    console.log("Uploaded file:", req.file); // Log uploaded file for debugging
-
-    if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded!" }); // Validate file presence
-    }
-
-    const { name, email } = req.body; // Extract form data
-    const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`; // Construct file URL
+    const { name, email } = req.body;
 
     if (!name || !email) {
-        return res.status(400).json({ error: "Name and email are required!" }); // Validate form fields
+        return res.status(400).json({ error: "Name and email are required!" });
     }
 
+    const existingUser = await ImageModel.findOne({ email });
+    if (existingUser) {
+        return res.status(400).json({ message: "Email already registered" });
+    }
+
+    if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded!" });
+    }
+
+    const imageUrl = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+
     try {
-        const newImage = new ImageModel({ name, email, imageUrl }); // Create new document
-        await newImage.save(); // Save to MongoDB
-        res.json({ message: "File uploaded and saved!", name, email, imageUrl }); // Respond to client
+        const newImage = new ImageModel({ name, email, imageUrl });
+        await newImage.save();
+        res.json({ message: "File uploaded and saved!", name, email, imageUrl });
     } catch (error) {
-        res.status(500).json({ error: "Database error", details: error.message }); // Handle database errors
+        res.status(500).json({ error: "Database error", details: error.message });
     }
 });
+
 
 // API endpoint to fetch all uploaded images
 app.get("/images", async (req, res) => {
