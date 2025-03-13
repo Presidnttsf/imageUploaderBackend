@@ -125,3 +125,31 @@ app.get("/images", async (req, res) => {
 
 // Start the server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+//delete route 
+app.delete("/delete/:id", async (req, res) => {
+    try {
+        const { id } = req.params; // Get the image ID from request params
+
+        // Find the image in the database
+        const image = await ImageModel.findById(id);
+        if (!image) {
+            return res.status(404).json({ message: "Image not found" });
+        }
+
+        // Delete the image file from the "uploads" directory
+        const imagePath = path.join(__dirname, "uploads", path.basename(image.imageUrl));
+        if (fs.existsSync(imagePath)) {
+            fs.unlinkSync(imagePath); // Remove file from storage
+        }
+
+        // Remove the image entry from MongoDB
+        await ImageModel.findByIdAndDelete(id);
+
+        res.json({ message: "Image deleted successfully!" });
+    } catch (error) {
+        console.error("Error deleting image:", error);
+        res.status(500).json({ message: "Error deleting image", error: error.message });
+    }
+});
